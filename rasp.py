@@ -11,6 +11,7 @@ a4_paper_size_mm = (210, 297)
 a3_paper_size_mm = (297, 420)
 border_size_mm = 10;
 temp_dir = os.path.abspath("temp_images")
+output_filename = "output.pdf"
 
 def padded_num_string(num):
     if num < 10:
@@ -206,8 +207,21 @@ def make_pdf_with_pillow(input_image_filename):
 
 def make_pdf_from_temp_images():
     print("make pdf document from images in temp dir...")
-    files = os.listdir(temp_dir)
-    print(f"... found {len(files)} files")
+    images = []
+    for fname in os.listdir(temp_dir):
+        image_file = False
+        if fname.endswith(".jpg"):
+           image_file = True
+        elif fname.endswith(".png"):
+           image_file = True
+        if image_file:
+            images.append(os.path.join(temp_dir, fname))
+    images.sort()
+    print(f"... found {len(images)} image files")
+    if len(images) > 0:
+        with open(output_filename, "wb") as f:
+            f.write(img2pdf.convert(images))
+            print(f"... wrote file: {output_filename}")
 
 def print_usage():
     print("\nUSAGE: rasp.py -w 500 -p a4 -i image.png")
