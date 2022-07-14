@@ -13,6 +13,9 @@ import math
 import os
 import numpy as np
 
+import sys
+import getopt
+
 
 
 # constants
@@ -50,10 +53,10 @@ def dims_mm_to_pt(dims):
 def print_image_info(filename):
     img = Image.open(filename)
     print("IMAGE INFORMATION:")
-    print(f"filename: {filename}")
-    print(f"format: {img.format}")
-    print(f"size: {img.size}")
-    print(f"mode: {img.mode}")
+    print(f"filename:      {filename}")
+    print(f"format:        {img.format}")
+    print(f"size (pixels): {img.size}")
+    print(f"mode:          {img.mode}")
 
 def make_slice_image(data, x1, y1, x_size, y_size, page_num):
     make_slice_image_array_slice(data, x1, y1, x_size, y_size, page_num)
@@ -288,14 +291,77 @@ def make_pdf_from_temp_images():
 
 
 
+def print_usage():
+    print("\nUSAGE: rasp.py -w 500 -p a4 -i image.png")
+    print()
+    print("-w = target width")
+    print("-h = target height")
+    print("-p = paper size (a4|a3)")
+    print("-i = input image")
+    print()
 
+def main(argv):
+    # handle command line options
+    target_width = -1
+    target_height = -1
+    paper_size = 'a4'
+    paper_size_mm = (0, 0)
+    input_image = ''
+
+    try:
+        opts, args = getopt.getopt(argv, "w:h:p:i:", ["width=", "height=", "paper-size=", "input-image="])
+    except getopt.GetoptError:
+        print_usage()
+        sys.exit(2)
+
+    if len(opts) == 0:
+        print_usage()
+        sys.exit()
+
+    print("PARSING ARGS:")
+
+    for opt, arg in opts:
+        # if opt == '-h':
+        #     print_usage()
+        #     sys.exit()
+        if opt in ('-w', '--width'):
+            target_width = int(arg)
+            print(f"... target width (mm):  {target_width}")
+        elif opt in ('-h', '--height'):
+            target_height = int(arg)
+            print(f"... target height (mm): {target_height}")
+        elif opt in ('-p', '--paper-size'):
+            paper_size = arg
+        elif opt in ('-i', '--input-image'):
+            input_image = arg
+
+    if (target_width < 1 and target_height < 1) or (target_width > 0 and target_height > 0):
+        print("\neither width or height must be set, but not both!\n")
+        sys.exit(2)
+
+    if paper_size == 'a4':
+        paper_size_mm = a4_paper_size_mm
+    elif paper_size == 'a3':
+        paper_size_mm = a3_paper_size_mm
+    else:
+        print(f"\npaper size {paper_size} not recognised!\n")
+        sys.exit(2)
+
+    if input_image == '':
+        print("\nplease specify an input image!\n")
+        sys.exit(2)
+
+    print(f"... paper type:         {paper_size}")
+    print(f"... paper size (mm):    {paper_size_mm}")
+    print(f"... input image:        {input_image}")
+
+    print()
+    print_image_info(input_image)
+    print()
+    resize_and_split(input_image, target_width, paper_size_mm)
+    print()
+    # make_pdf_from_temp_images()
+    # # add_border(img)
 
 if __name__ == '__main__':
-    img = 'alien-storm.png'
-    print()
-    print_image_info(img)
-    print()
-    resize_and_split(img, 500, a4_paper_size_mm)
-    print()
-    make_pdf_from_temp_images()
-    # add_border(img)
+    main(sys.argv[1:])
