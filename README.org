@@ -1,0 +1,10 @@
+#+TITLE: RASp (Resize And Split)
+
+* Introduction
+
+This is a simple program which resizes images and splits them into sections for
+printing.
+
+* Dependencies
+- PIL/Pillow
+- numpy
