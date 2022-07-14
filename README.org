@@ -1,10 +1,85 @@
-#+TITLE: RASp (Resize And Split)
+#+TITLE: RASP: [R]esize [A]nd [Sp]lit Images for Printing
 
 * Introduction
 
-This is a simple program which resizes images and splits them into sections for
-printing.
+RASP is a simple python program which resizes images and splits them into
+sections for printing on multiple sheets of paper.
+
+* Usage
+
+EXAMPLE: resize input image to 1000mm wide and split up for printing on multiple
+sheets of A4 paper:
+
+: python rasp.py -w 1000 -i alien-storm.png
+
+Command Line Options:
+- -w = target width
+- -h = target height
+- -p = paper size (a4|a3) (a4 is the default)
+- -i = input image
 
 * Dependencies
 - PIL/Pillow
 - numpy
+- getopt
+
+- img2pdf
+- fpdf
+
+* Future Improvements
+- enhance colours
+- multi-page pdf ouput
+
+article about splitting image into blocks efficiently:
+https://towardsdatascience.com/efficiently-splitting-an-image-into-tiles-in-python-using-numpy-d1bf0dd7b6f7
+
+* Issues
+** from img2pdf web page
+- An error is produced if the input image is broken. This commonly happens if
+  the input image has an invalid EXIF Orientation value of zero. Even though
+  only nine different values from 1 to 9 are permitted, Anroid phones and Canon
+  DSLR cameras produce JPEG images with the invalid value of zero. Either fix
+  your input images with exiftool or similar software before passing the JPEG to
+  img2pdf or run img2pdf with --rotation=ifvalid (if you run img2pdf from the
+  commandline) or by passing rotation=img2pdf.Rotation.ifvalid as an argument to
+  convert() when using img2pdf as a library.
+- img2pdf uses PIL (or Pillow) to obtain image meta data and to convert the
+  input if necessary. To prevent decompression bomb denial of service attacks,
+  Pillow limits the maximum number of pixels an input image is allowed to
+  have. If you are sure that you know what you are doing, then you can disable
+  this safeguard by passing the --pillow-limit-break option to img2pdf. This
+  allows one to process even very large input images.
+
+* Implementation
+
+adding borders
+
+https://medium.com/analytics-vidhya/adding-a-border-to-the-image-using-numpy-efa23f7f1cdf
+
+https://www.blog.pythonlibrary.org/2017/10/26/how-to-add-a-border-to-your-photos-with-python/
+
+https://gist.github.com/namieluss/a440061734075d929f0c6b9f6bd919c7
+
+split image
+
+https://towardsdatascience.com/efficiently-splitting-an-image-into-tiles-in-python-using-numpy-d1bf0dd7b6f7
+
+import image into numpy
+
+https://www.pluralsight.com/guides/importing-image-data-into-numpy-arrays
+
+make pdf
+
+https://pypi.org/project/img2pdf/
+
+https://datatofish.com/images-to-pdf-python/
+
+https://www.geeksforgeeks.org/python-convert-image-to-pdf-using-img2pdf-module/
+
+https://hackernoon.com/how-to-create-a-pdf-file-from-a-list-of-images-with-python-lj2z332r
+
+* see also
+
+split-image
+
+https://blog.whidev.com/split-image-tiles-python/
