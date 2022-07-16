@@ -18,9 +18,6 @@ def padded_num_string(num):
         return f"0{num}"
     return f"{num}"
 
-def dims_mm_to_pt(dims):
-    return (img2pdf.mm_to_pt(dims[0]), img2pdf.mm_to_pt(dims[1]))
-
 def print_image_info(filename):
     img = Image.open(filename)
     print("IMAGE INFORMATION:")
@@ -180,7 +177,9 @@ def make_pdf_from_temp_images(output_fname, paper_size_mm):
     images.sort()
     print(f"... found {len(images)} image files")
     if len(images) > 0:
-        layout_fun = img2pdf.get_layout_fun(dims_mm_to_pt(paper_size_mm))
+        paper_size_pt = (img2pdf.mm_to_pt(paper_size_mm[0]),
+                         img2pdf.mm_to_pt(paper_size_mm[1]))
+        layout_fun = img2pdf.get_layout_fun(paper_size_pt)
         with open(output_fname, "wb") as f:
             f.write(img2pdf.convert(images, layout_fun=layout_fun))
             print(f"... wrote file: {output_fname}")
@@ -269,7 +268,8 @@ def main(argv):
         print()
         resize_and_split(fname, target_axis, target_mm, paper_size_mm, border_mm)
         print()
-        output_fname = "output" + padded_num_string(count) + ".pdf"
+        # output filename format: fname_width_600mm.pdf
+        output_fname = fname.split(".")[0] + "_" + target_axis + "_" + str(target_mm) + "mm.pdf"
         make_pdf_from_temp_images(output_fname, paper_size_mm)
         print()
         count += 1
