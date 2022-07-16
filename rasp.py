@@ -48,25 +48,17 @@ def make_slice_image(data, x1, y1, x_size, y_size):
 
 def make_slice_image_array_slice(data, x1, y1, x_size, y_size):
     section = data[y1:y1 + y_size, x1:x1 + x_size, :]
-    # print(f"section shape: {section.shape}")
     # fill in empty side-strips
     if len(section) < y_size:
         n = y_size - len(section)
-        # print(f"... add {n} extra in Y")
         extra = np.zeros([n, len(section[0]), 3])
         extra = (extra * 255).astype(np.uint8)
-        # print(f"... extra shape (Y): {extra.shape}")
         section = np.concatenate([section, extra], axis=0)
-        # print(f"... section shape: {section.shape}")
     if len(section[0]) < x_size:
         n = x_size - len(section[0])
-        # print(f"... add {n} extra in X")
         extra = np.zeros([len(section), n, 3])
         extra = (extra * 255).astype(np.uint8)
-        # print(f"... extra shape (X): {extra.shape}")
         section = np.concatenate([section, extra], axis=1)
-        # print(f"... section shape: {section.shape}")
-    # print("convert array back to image")
     return Image.fromarray(section)
 
 def make_slice_image_for_loop(data, x1, y1, x_size, y_size):
@@ -104,21 +96,29 @@ def make_slice_image_for_loop(data, x1, y1, x_size, y_size):
     return Image.fromarray((section * 255).astype(np.uint8))
 
 def add_border(img, border_size_mm):
+    """Add a white border of specified number of pixels."""
     # border can be a tuple of 1, 2 or 4 numbers
     border = (border_size_mm)
-    return ImageOps.expand(img, border=border, fill='rgb(0, 0, 255)')
+    return ImageOps.expand(img, border=border, fill='rgb(255, 255, 255)')
 
 def save_temp_image(img, page_num):
     page_num_str = padded_num_string(page_num)
     img.save(os.path.join(temp_dir, f"temp{page_num_str}.png"))
-    print(f"temp image size: {img.size}")
 
-def resize_and_split(input_image, target_width_mm, paper_size_mm, border_size_mm):
+def resize_and_split(input_image, target_axis, target_mm, paper_size_mm, border_size_mm):
     print("RESIZING AND SPLITTING IMAGE:")
     input_img = Image.open(input_image)
     img = input_img.convert('RGB')
     print(f"input image size (pixels): {img.size}")
-    target_size_mm = (target_width_mm, target_width_mm / (img.size[0] / img.size[1]))
+
+    target_size_mm = (0, 0)
+    if target_axis == "height":
+        target_size_mm = (target_mm / (img.size[1] / img.size[0]),
+                          target_mm)
+    else: # target_axis == "width":
+        target_size_mm = (target_mm,
+                          target_mm / (img.size[0] / img.size[1]))
+
     print(f"target size (mm): {target_size_mm}")
     print(f"paper size (mm): {paper_size_mm}")
     page_size_mm = (paper_size_mm[0] - (2 * border_size_mm),
@@ -143,11 +143,7 @@ def resize_and_split(input_image, target_width_mm, paper_size_mm, border_size_mm
     print("converting image to numpy array")
     data = np.asarray(img)
     print(f"... numpy array dimensions: {data.shape}")
-    # print(f"... element data[0] = {data[0]}")
-    # print(f"... element data[0][0] = {data[0][0]}")
     print(f"... data.size: {data.size}")
-    # print(f"... data[0:190, 0:443, :].shape: {data[0:190, 0:443, :].shape}")
-    # print(f"... data[190:380, 443:453, :].shape: {data[190:380, 443:453, :].shape}")
 
     print("slice up image data and create new images...")
     modf_rows = math.modf(num_pages_vert)
@@ -162,7 +158,6 @@ def resize_and_split(input_image, target_width_mm, paper_size_mm, border_size_mm
     for row in range(num_rows):
         for col in range(num_cols):
             page_num += 1
-            # print(f"... p{page_num}(r{row}, c{col})")
             sub_img = make_slice_image(data,
                                        col * int(img_page_pixels_x),
                                        row * int(img_page_pixels_y),
@@ -171,15 +166,8 @@ def resize_and_split(input_image, target_width_mm, paper_size_mm, border_size_mm
                 sub_img = add_border(sub_img, border_size_mm)
             save_temp_image(sub_img, page_num)
 
-# DEPRECATED
-# convert image to a full page pdf using Pillow only
-def make_pdf_with_pillow(input_image_filename):
-    input_img = Image.open(input_image_filename)
-    img = input_img.convert('RGB')
-    img.save('output.pdf')
-
 def make_pdf_from_temp_images(output_fname, paper_size_mm):
-    print("make pdf document from images in temp dir...")
+    print("MAKE PDF DOCUMENT FROM IMAGES IN TEMP DIR:")
     images = []
     for fname in os.listdir(temp_dir):
         image_file = False
@@ -202,21 +190,23 @@ def print_usage():
     print()
     print("-x, --width      = target width in mm")
     print("-y, --height     = target height in mm")
-    print("-p, --paper-size = (OPTIONAL) paper size (a4|a3), default is a4")
+    print("-p, --paper-type = (OPTIONAL) paper type (a4|a3), default is a4")
     print("-b, --border     = (OPTIONAL) border size in mm, default is 0")
     print()
 
 def main(argv):
     target_width = -1
     target_height = -1
-    paper_size = 'a4'
+    target_mm = -1
+    target_axis = ""
+    paper_type = 'a4'
     paper_size_mm = (0, 0)
-    border_size_mm = 0
+    border_mm = 0
 
     try:
         opts, args = getopt.getopt(argv,
                                    "hx:y:p:b:",
-                                   ["width=", "height=", "paper-size=", "border="])
+                                   ["width=", "height=", "paper-type=", "border="])
 
     except getopt.GetoptError:
         print_usage()
@@ -228,40 +218,47 @@ def main(argv):
             sys.exit()
         if opt in ('-x', '--width'):
             target_width = int(arg)
-            print(f"... target width (mm):  {target_width}")
         elif opt in ('-y', '--height'):
             target_height = int(arg)
-            print(f"... target height (mm): {target_height}")
-        elif opt in ('-p', '--paper-size'):
-            paper_size = arg
+        elif opt in ('-p', '--paper-type'):
+            paper_type = arg
         elif opt in ('-b', '--border'):
-            border_size_mm = int(arg)
+            border_mm = int(arg)
 
-    if (target_width < 1 and target_height < 1) or (target_width > 0 and target_height > 0):
+    if target_width > 0 and target_height < 0:
+        target_mm = target_width
+        target_axis = "width"
+    elif (target_width < 0 and target_height > 0):
+        target_mm = target_height
+        target_axis = "height"
+    else:
         print("\nEither width or height must be set, but not both!\n")
         print_usage()
         sys.exit(2)
 
-    if paper_size == 'a4':
+    if paper_type == 'a4':
         paper_size_mm = a4_paper_size_mm
-    elif paper_size == 'a3':
+    elif paper_type == 'a3':
         paper_size_mm = a3_paper_size_mm
     else:
-        print(f"\nPaper size {paper_size} not recognised!\n")
+        print(f"\nPaper size {paper_type} not recognised!\n")
         print_usage()
         sys.exit(2)
 
-    # get image filenames
+    # get input image filenames
     if len(args) < 1:
         print("\nYou must supply at least one image file!\n")
         print_usage()
         sys.exit(2)
     filenames = args
 
-    print(f"... paper type:         {paper_size}")
-    print(f"... paper size (mm):    {paper_size_mm}")
-    print(f"... border size (mm):   {border_size_mm}")
-    print(f"... image files:        {filenames}")
+    print()
+    print(f"... target size: {target_mm}mm")
+    print(f"... target axis: {target_axis}")
+    print(f"... paper type:  {paper_type}")
+    print(f"... paper size:  {paper_size_mm} mm")
+    print(f"... border size: {border_mm}mm")
+    print(f"... image files: {filenames}")
 
     count = 0
     for fname in filenames:
@@ -270,7 +267,7 @@ def main(argv):
         print()
         print_image_info(fname)
         print()
-        resize_and_split(fname, target_width, paper_size_mm, border_size_mm)
+        resize_and_split(fname, target_axis, target_mm, paper_size_mm, border_mm)
         print()
         output_fname = "output" + padded_num_string(count) + ".pdf"
         make_pdf_from_temp_images(output_fname, paper_size_mm)
