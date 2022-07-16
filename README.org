@@ -1,4 +1,4 @@
-#+TITLE: RASP: [R]esize [A]nd [Sp]lit Images for Printing
+#+TITLE: RASP: [R]esize [A]nd [S]plit Images for [P]rinting
 
 * Introduction
 
@@ -11,13 +11,18 @@ document.
 EXAMPLE: resize input image to 1000mm wide and split up for printing on multiple
 sheets of A4 paper:
 
-: python rasp.py -w 1000 -i alien-storm.png
+: python rasp.py -x 1000 image.png
 
 Command Line Options:
-- -w = target width
-- -h = target height
-- -p = paper size (a4|a3) (a4 is the default)
-- -i = input image
+- -h, --help       = print usage info and exit
+- -x, --width      = target width in mm
+- -y, --height     = target height in mm
+- -p, --paper-size = paper size (a4|a3) (a4 is the default)
+- -b, --border     = border size in mm (a4|a3) (0 is the default)
+
+All remaining args should be image filenames:
+- RASP currently only recongnises ".png" and ".jpg"
+- multiple image files can be given
 
 * Dependencies
 - getopt
