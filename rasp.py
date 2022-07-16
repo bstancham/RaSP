@@ -47,13 +47,12 @@ def clean_temp_dir():
         num_deleted += 1
     print(f"... deleted {num_deleted} existing files in temp dir")
 
-def make_slice_image(data, x1, y1, x_size, y_size, page_num):
-    make_slice_image_array_slice(data, x1, y1, x_size, y_size, page_num)
+def make_slice_image(data, x1, y1, x_size, y_size):
+    return make_slice_image_array_slice(data, x1, y1, x_size, y_size)
 
-def make_slice_image_array_slice(data, x1, y1, x_size, y_size, page_num):
+def make_slice_image_array_slice(data, x1, y1, x_size, y_size):
     section = data[y1:y1 + y_size, x1:x1 + x_size, :]
     # print(f"section shape: {section.shape}")
-
     # fill in empty side-strips
     if len(section) < y_size:
         n = y_size - len(section)
@@ -71,17 +70,10 @@ def make_slice_image_array_slice(data, x1, y1, x_size, y_size, page_num):
         # print(f"... extra shape (X): {extra.shape}")
         section = np.concatenate([section, extra], axis=1)
         # print(f"... section shape: {section.shape}")
-
-    # convert to image and save in temp dir
     # print("convert array back to image")
-    temp_img = Image.fromarray(section)
-    # print(f"temp_img.size: {temp_img.size}")
-    page_num_str = padded_num_string(page_num)
-    temp_img.save(os.path.join(temp_dir, f"temp{page_num_str}.png"))
+    return Image.fromarray(section)
 
-def make_slice_image_for_loop(data, x1, y1, x_size, y_size, page_num):
-
-    # section = np.zeros([x_size, y_size, 3])
+def make_slice_image_for_loop(data, x1, y1, x_size, y_size):
     section = np.zeros([y_size, x_size, 3])
 
     print(f"section shape: {section.shape}")
@@ -115,12 +107,17 @@ def make_slice_image_for_loop(data, x1, y1, x_size, y_size, page_num):
 
     # convert to image and save in temp dir
     print("convert array back to image")
-    # temp_img = Image.fromarray(section)
-    temp_img = Image.fromarray((section * 255).astype(np.uint8))
-    # temp_img = Image.fromarray(section.astype(np.uint8))
+    return Image.fromarray((section * 255).astype(np.uint8))
+
+def add_border(img):
+    # border can be a tuple of 1, 2 or 4 numbers
+    border = (border_size_mm)
+    return ImageOps.expand(img, border=border, fill='rgb(0, 0, 255)')
+
+def save_temp_image(img, page_num):
     page_num_str = padded_num_string(page_num)
-    temp_img.save(os.path.join(temp_dir, f"temp{page_num_str}.png"))
-    print(f"temp_img.size: {temp_img.size}")
+    img.save(os.path.join(temp_dir, f"temp{page_num_str}.png"))
+    print(f"temp image size: {img.size}")
 
 def resize_and_split(input_image, target_width_mm, paper_size_mm):
     print("RESIZING AND SPLITTING IMAGE:")
@@ -174,20 +171,12 @@ def resize_and_split(input_image, target_width_mm, paper_size_mm):
         for col in range(num_cols):
             page_num += 1
             # print(f"... p{page_num}(r{row}, c{col})")
-            make_slice_image(data,
-                             col * int(img_page_pixels_x),
-                             row * int(img_page_pixels_y),
-                             int(img_page_pixels_x), int(img_page_pixels_y), page_num)
-
-# DEPRECATED
-# add border to image
-# why does this convert to B&W?
-def add_border(input_img_filename):
-    input_img = Image.open(input_img_filename)
-    img = input_img.convert('RGB')
-    border = (10, 50, 100, 200) # (left, top, right, bottom)
-    img_with_border = ImageOps.expand(img, border=border, fill='rgb(0, 0, 255)')
-    img_with_border.save('with_border.png')
+            sub_img = make_slice_image(data,
+                                       col * int(img_page_pixels_x),
+                                       row * int(img_page_pixels_y),
+                                       int(img_page_pixels_x), int(img_page_pixels_y))
+            sub_img = add_border(sub_img)
+            save_temp_image(sub_img, page_num)
 
 # DEPRECATED
 # make pdf
@@ -205,7 +194,7 @@ def make_pdf_with_pillow(input_image_filename):
     img = input_img.convert('RGB')
     img.save('output.pdf')
 
-def make_pdf_from_temp_images():
+def make_pdf_from_temp_images(paper_size_mm):
     print("make pdf document from images in temp dir...")
     images = []
     for fname in os.listdir(temp_dir):
@@ -219,8 +208,9 @@ def make_pdf_from_temp_images():
     images.sort()
     print(f"... found {len(images)} image files")
     if len(images) > 0:
+        layout_fun = img2pdf.get_layout_fun(dims_mm_to_pt(paper_size_mm))
         with open(output_filename, "wb") as f:
-            f.write(img2pdf.convert(images))
+            f.write(img2pdf.convert(images, layout_fun=layout_fun))
             print(f"... wrote file: {output_filename}")
 
 def print_usage():
@@ -297,7 +287,7 @@ def main(argv):
     print()
     resize_and_split(input_image, target_width, paper_size_mm)
     print()
-    make_pdf_from_temp_images()
+    make_pdf_from_temp_images(paper_size_mm)
     print()
 
 if __name__ == '__main__':
