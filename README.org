@@ -1,8 +1,8 @@
-#+TITLE: RASP: [R]esize [A]nd [S]plit Images for [P]rinting
+#+TITLE: RaSP: [R]esize [a]nd [S]plit Images for [P]rinting
 
 * Introduction
 
-RASP is a simple python program which resizes images and splits them into
+RaSP is a simple python program which resizes images and splits them into
 sections for printing on multiple sheets of paper and outputs a multi-page PDF
 document.
 
@@ -18,11 +18,15 @@ Command Line Options:
 - -x, --width      = target width in mm
 - -y, --height     = target height in mm
 - -p, --paper-size = paper size (a4|a3) (a4 is the default)
-- -b, --border     = border size in mm (a4|a3) (0 is the default)
+- -b, --border     = border size in mm (0 is the default)
 
 All remaining args should be image filenames:
-- RASP currently only recongnises ".png" and ".jpg"
+- RaSP currently recognises only ".png" and ".jpg" image files
 - multiple image files can be given
+
+The output is a multi-page PDF document. RaSP will create a sub-directory called
+"temp_images", where the individual parts of the last sliced image are stored as
+PNG files.
 
 * Dependencies
 - getopt

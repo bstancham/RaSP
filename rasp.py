@@ -48,12 +48,12 @@ def make_slice_image_array_slice(data, x1, y1, x_size, y_size):
     # fill in empty side-strips
     if len(section) < y_size:
         n = y_size - len(section)
-        extra = np.zeros([n, len(section[0]), 3])
+        extra = np.ones([n, len(section[0]), 3])
         extra = (extra * 255).astype(np.uint8)
         section = np.concatenate([section, extra], axis=0)
     if len(section[0]) < x_size:
         n = x_size - len(section[0])
-        extra = np.zeros([len(section), n, 3])
+        extra = np.ones([len(section), n, 3])
         extra = (extra * 255).astype(np.uint8)
         section = np.concatenate([section, extra], axis=1)
     return Image.fromarray(section)
@@ -273,7 +273,11 @@ def main(argv):
         make_pdf_from_temp_images(output_fname, paper_size_mm)
         print()
         count += 1
-    print(f"\n{count} files processed\n")
+    if count == 1:
+        print("1 file processed")
+    else:
+        print(f"\n{count} files processed")
+    print()
 
 if __name__ == '__main__':
     main(sys.argv[1:])
