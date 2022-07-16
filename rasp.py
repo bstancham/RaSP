@@ -127,7 +127,7 @@ def resize_and_split(input_image, target_width_mm, paper_size_mm):
     input_img = Image.open(input_image)
     img = input_img.convert('RGB')
     print(f"input image size (pixels): {img.size}")
-    target_size_mm = (target_width_mm, target_width_mm * (img.size[0] / img.size[1]))
+    target_size_mm = (target_width_mm, target_width_mm / (img.size[0] / img.size[1]))
     print(f"target size (mm): {target_size_mm}")
     print(f"paper size (mm): {paper_size_mm}")
     page_size_mm = (paper_size_mm[0] - (2 * border_size_mm),
