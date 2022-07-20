@@ -268,8 +268,9 @@ def main(argv):
         print()
         resize_and_split(fname, target_axis, target_mm, paper_size_mm, border_mm)
         print()
-        # output filename format: fname_width_600mm.pdf
-        output_fname = fname.split(".")[0] + "_" + target_axis + "_" + str(target_mm) + "mm.pdf"
+        # output filename format: fname_width_600mm_a4.pdf
+        size_str = target_axis + "_" + str(target_mm) + "mm"
+        output_fname = fname.split(".")[0] + "_" + size_str + "_" + paper_type + ".pdf"
         make_pdf_from_temp_images(output_fname, paper_size_mm)
         print()
         count += 1
