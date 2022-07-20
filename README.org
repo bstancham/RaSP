@@ -24,9 +24,13 @@ All remaining args should be image filenames:
 - RaSP currently recognises only ".png" and ".jpg" image files
 - multiple image files can be given
 
-The output is a multi-page PDF document. RaSP will create a sub-directory called
-"temp_images", where the individual parts of the last sliced image are stored as
-PNG files.
+The output is a multi-page PDF document. RaSP will also create a sub-directory
+called "temp_images", where the individual parts of the last sliced image are
+stored as PNG files.
+
+The image below is split for 900mm target width on A4 paper.
+
+[[./screenshot.jpg]]
 
 * Dependencies
 - getopt
