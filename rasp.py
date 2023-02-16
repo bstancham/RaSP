@@ -227,7 +227,7 @@ def main(argv):
     if target_width > 0 and target_height < 0:
         target_mm = target_width
         target_axis = "width"
-    elif (target_width < 0 and target_height > 0):
+    elif target_width < 0 and target_height > 0:
         target_mm = target_height
         target_axis = "height"
     else:
