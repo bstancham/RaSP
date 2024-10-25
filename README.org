@@ -17,16 +17,20 @@ Command Line Options:
 - -h, --help       = print usage info and exit
 - -x, --width      = target width in mm
 - -y, --height     = target height in mm
-- -p, --paper-size = paper size (a4|a3) (a4 is the default)
+- -p, --paper-size = paper size (a4|a3|a4land|a3land) (a4 is the default)
 - -b, --border     = border size in mm (0 is the default)
+- -s, --split      = split output into multiple pdf files (defualt is 1)
 
 All remaining args should be image filenames:
 - RaSP currently recognises only ".png" and ".jpg" image files
 - multiple image files can be given
 
-The output is a multi-page PDF document. RaSP will also create a sub-directory
-called "temp_images", where the individual parts of the last sliced image are
-stored as PNG files.
+The output is a multi-page PDF document, or multiple PDF documents if
+specified. When splitting a very large image I found it helpful to split the
+output into multiple files, both for transferring (I had to email it) and for
+sending to the printer. RaSP will also create a sub-directory called
+"temp_images", where the individual parts of the last sliced image are stored as
+PNG files.
 
 The image below is split for 900mm target width on A4 paper.
 

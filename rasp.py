@@ -9,6 +9,8 @@ import img2pdf
 # constants
 a4_paper_size_mm = (210, 297)
 a3_paper_size_mm = (297, 420)
+a4_landscape_paper_size_mm = (297, 210)
+a3_landscape_paper_size_mm = (420, 297)
 temp_dir = os.path.abspath("temp_images")
 
 def padded_num_string(num):
@@ -103,6 +105,8 @@ def save_temp_image(img, page_num):
     img.save(os.path.join(temp_dir, f"temp{page_num_str}.png"))
 
 def resize_and_split(input_image, target_axis, target_mm, paper_size_mm, border_size_mm):
+    """Resizes and splits the image, saving each part as a separate image in the
+    temp-images dir. Deletes any existing files in temp-images dir."""
     print("RESIZING AND SPLITTING IMAGE:")
     input_img = Image.open(input_image)
     img = input_img.convert('RGB')
@@ -163,7 +167,13 @@ def resize_and_split(input_image, target_axis, target_mm, paper_size_mm, border_
                 sub_img = add_border(sub_img, border_size_mm)
             save_temp_image(sub_img, page_num)
 
-def make_pdf_from_temp_images(output_fname, paper_size_mm):
+def make_pdf_from_temp_images(output_fname, paper_size_mm, num_files):
+    """Compiles all image files in temp-images dir into pdf document, or
+    multiple pdf documents, if num_files is greater than 1. If multiple files
+    are created, numbers are appended to the filenames.
+
+    output_fname = output filename, without .pdf suffix
+    """
     print("MAKE PDF DOCUMENT FROM IMAGES IN TEMP DIR:")
     images = []
     for fname in os.listdir(temp_dir):
@@ -175,22 +185,48 @@ def make_pdf_from_temp_images(output_fname, paper_size_mm):
         if image_file:
             images.append(os.path.join(temp_dir, fname))
     images.sort()
-    print(f"... found {len(images)} image files")
-    if len(images) > 0:
-        paper_size_pt = (img2pdf.mm_to_pt(paper_size_mm[0]),
-                         img2pdf.mm_to_pt(paper_size_mm[1]))
-        layout_fun = img2pdf.get_layout_fun(paper_size_pt)
-        with open(output_fname, "wb") as f:
-            f.write(img2pdf.convert(images, layout_fun=layout_fun))
-            print(f"... wrote file: {output_fname}")
+    num_images = len(images)
+    images_per_file = num_images / num_files
+    print(f"... found {num_images} image files")
+    print(f"... ... making {num_files} pdf files with {images_per_file} images each")
+
+    image_groups = []
+    group = []
+    n = 0
+    for img in images:
+        group.append(img)
+        n += 1
+        if n >= images_per_file:
+            image_groups.append(group)
+            group = []
+            n = 0
+
+    if n != 0:
+        image_groups.append(group)
+
+    print(f"... created {len(image_groups)} groups")
+
+    if len(image_groups) > 0:
+    # if len(images) > 0:
+        group_num = 0;
+        for group in image_groups:
+            group_fname = output_fname.split(".")[0] + str(group_num) + ".pdf"
+            paper_size_pt = (img2pdf.mm_to_pt(paper_size_mm[0]),
+                             img2pdf.mm_to_pt(paper_size_mm[1]))
+            layout_fun = img2pdf.get_layout_fun(paper_size_pt)
+            with open(group_fname, "wb") as f:
+                f.write(img2pdf.convert(group, layout_fun=layout_fun))
+                print(f"... wrote file: {group_fname}")
+            group_num += 1
 
 def print_usage():
     print("\nUSAGE: python rasp.py -x [mm] [IMAGE_FILES...]")
     print()
     print("-x, --width      = target width in mm")
     print("-y, --height     = target height in mm")
-    print("-p, --paper-type = (OPTIONAL) paper type (a4|a3), default is a4")
+    print("-p, --paper-type = (OPTIONAL) paper type (a4|a3|a4land|a3land), default is a4")
     print("-b, --border     = (OPTIONAL) border size in mm, default is 0")
+    print("-s, --split      = (OPTIONAL) split output into multiple pdf files, default is 1")
     print()
 
 def main(argv):
@@ -201,11 +237,12 @@ def main(argv):
     paper_type = 'a4'
     paper_size_mm = (0, 0)
     border_mm = 0
+    num_pdf = 1
 
     try:
         opts, args = getopt.getopt(argv,
-                                   "hx:y:p:b:",
-                                   ["width=", "height=", "paper-type=", "border="])
+                                   "hx:y:p:b:s:",
+                                   ["width=", "height=", "paper-type=", "border=", "split="])
 
     except getopt.GetoptError:
         print_usage()
@@ -223,6 +260,8 @@ def main(argv):
             paper_type = arg
         elif opt in ('-b', '--border'):
             border_mm = int(arg)
+        elif opt in ('-s', '--split'):
+            num_pdf = int(arg)
 
     if target_width > 0 and target_height < 0:
         target_mm = target_width
@@ -239,6 +278,10 @@ def main(argv):
         paper_size_mm = a4_paper_size_mm
     elif paper_type == 'a3':
         paper_size_mm = a3_paper_size_mm
+    elif paper_type == 'a4land':
+        paper_size_mm = a4_landscape_paper_size_mm
+    elif paper_type == 'a3land':
+        paper_size_mm = a3_landscape_paper_size_mm
     else:
         print(f"\nPaper size {paper_type} not recognised!\n")
         print_usage()
@@ -257,6 +300,7 @@ def main(argv):
     print(f"... paper type:  {paper_type}")
     print(f"... paper size:  {paper_size_mm} mm")
     print(f"... border size: {border_mm}mm")
+    print(f"... num pdf files: {num_pdf}")
     print(f"... image files: {filenames}")
 
     count = 0
@@ -268,10 +312,9 @@ def main(argv):
         print()
         resize_and_split(fname, target_axis, target_mm, paper_size_mm, border_mm)
         print()
-        # output filename format: fname_width_600mm_a4.pdf
         size_str = target_axis + "_" + str(target_mm) + "mm"
-        output_fname = fname.split(".")[0] + "_" + size_str + "_" + paper_type + ".pdf"
-        make_pdf_from_temp_images(output_fname, paper_size_mm)
+        output_fname = fname.split(".")[0] + "_" + size_str + "_" + paper_type
+        make_pdf_from_temp_images(output_fname, paper_size_mm, num_pdf)
         print()
         count += 1
     if count == 1:
